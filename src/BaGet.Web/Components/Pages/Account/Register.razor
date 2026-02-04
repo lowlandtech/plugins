@@ -1,0 +1,145 @@
+@page "/account/register"
+@using BaGet.Core.Identity
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
+
+<PageTitle>Register - BaGet</PageTitle>
+
+<div class="min-h-[60vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <Card Class="max-w-md w-full">
+        <CardHeader Class="text-center">
+            <CardTitle Class="text-2xl">Create your account</CardTitle>
+            <CardDescription>
+                Already have an account? <a href="/account/login" class="text-primary hover:underline">Sign in</a>
+            </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+            <EditForm Model="@Input" OnValidSubmit="HandleRegister" FormName="register">
+                <DataAnnotationsValidator />
+
+                @if (Errors.Any())
+                {
+                    <Alert Variant="Alert.AlertVariant.Destructive" Class="mb-4">
+                        <ul class="list-disc list-inside">
+                            @foreach (var error in Errors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </Alert>
+                }
+
+                <div class="space-y-4">
+                    <div>
+                        <Label For="displayName">Display Name</Label>
+                        <InputText @bind-Value="Input.DisplayName" id="displayName" autocomplete="name"
+                                   class="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                        <ValidationMessage For="@(() => Input.DisplayName)" class="text-sm text-destructive mt-1" />
+                    </div>
+
+                    <div>
+                        <Label For="email">Email address</Label>
+                        <InputText @bind-Value="Input.Email" id="email" type="email" autocomplete="email"
+                                   class="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                        <ValidationMessage For="@(() => Input.Email)" class="text-sm text-destructive mt-1" />
+                    </div>
+
+                    <div>
+                        <Label For="password">Password</Label>
+                        <InputText @bind-Value="Input.Password" id="password" type="password" autocomplete="new-password"
+                                   class="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                        <ValidationMessage For="@(() => Input.Password)" class="text-sm text-destructive mt-1" />
+                        <p class="mt-1 text-xs text-muted-foreground">Minimum 8 characters, must include uppercase, lowercase, and a digit</p>
+                    </div>
+
+                    <div>
+                        <Label For="confirmPassword">Confirm Password</Label>
+                        <InputText @bind-Value="Input.ConfirmPassword" id="confirmPassword" type="password" autocomplete="new-password"
+                                   class="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                        <ValidationMessage For="@(() => Input.ConfirmPassword)" class="text-sm text-destructive mt-1" />
+                    </div>
+
+                    <Button Type="submit" Class="w-full" Disabled="@IsSubmitting">
+                        @if (IsSubmitting)
+                        {
+                            <span>Creating account...</span>
+                        }
+                        else
+                        {
+                            <span>Create Account</span>
+                        }
+                    </Button>
+
+                    <p class="text-xs text-center text-muted-foreground">
+                        By creating an account, you'll receive an API key for publishing packages.
+                    </p>
+                </div>
+            </EditForm>
+        </CardContent>
+    </Card>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private RegisterInput Input { get; set; } = new();
+    private List<string> Errors { get; set; } = new();
+    private bool IsSubmitting { get; set; }
+
+    private async Task HandleRegister()
+    {
+        IsSubmitting = true;
+        Errors.Clear();
+        StateHasChanged();
+
+        var user = new ApplicationUser
+        {
+            UserName = Input.Email,
+            Email = Input.Email,
+            DisplayName = Input.DisplayName,
+            ApiKey = IdentityUtilities.GenerateApiKey()
+        };
+
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (result.Succeeded)
+        {
+            await SignInManager.SignInAsync(user, isPersistent: false);
+            Navigation.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            Errors.Add(error.Description);
+        }
+
+        IsSubmitting = false;
+    }
+
+    private class RegisterInput
+    {
+        [Required]
+        [StringLength(100, MinimumLength = 2)]
+        [Display(Name = "Display Name")]
+        public string DisplayName { get; set; } = "";
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 8)]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}

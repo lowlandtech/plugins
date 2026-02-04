@@ -1,0 +1,36 @@
+@page "/account/logout"
+@using BaGet.Core.Identity
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
+
+<PageTitle>Sign Out - BaGet</PageTitle>
+
+<div class="min-h-[60vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <Card Class="max-w-md w-full text-center">
+        <CardHeader>
+            <CardTitle Class="text-2xl">Sign out</CardTitle>
+            <CardDescription>Are you sure you want to sign out?</CardDescription>
+        </CardHeader>
+
+        <CardContent>
+            <div class="space-y-4">
+                <Button OnClick="HandleLogout" Class="w-full">
+                    Sign out
+                </Button>
+
+                <p class="text-sm text-muted-foreground">
+                    <a href="/" class="text-primary hover:underline">Cancel and go back</a>
+                </p>
+            </div>
+        </CardContent>
+    </Card>
+</div>
+
+@code {
+    private async Task HandleLogout()
+    {
+        await SignInManager.SignOutAsync();
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}

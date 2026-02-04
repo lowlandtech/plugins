@@ -1,0 +1,217 @@
+@page "/account/apikeys"
+@attribute [Authorize]
+@using BaGet.Core.Identity
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>API Keys - BaGet</PageTitle>
+
+<div class="max-w-3xl mx-auto py-8">
+    <Card>
+        <CardHeader>
+            <CardTitle Class="text-2xl">API Keys</CardTitle>
+            <CardDescription>Use your API key to push packages to this server.</CardDescription>
+        </CardHeader>
+
+        <CardContent>
+            @if (!string.IsNullOrEmpty(StatusMessage))
+            {
+                <Alert Variant="Alert.AlertVariant.Success" Class="mb-4">
+                    @StatusMessage
+                </Alert>
+            }
+
+            @if (User != null)
+            {
+                <div class="space-y-6">
+                    @* API Key Display *@
+                    <div>
+                        <Label>Your API Key</Label>
+                        <div class="flex items-center mt-2">
+                            <div class="flex-1 flex">
+                                <input type="@(ShowKey ? "text" : "password")"
+                                       value="@User.ApiKey"
+                                       readonly
+                                       class="flex-1 h-9 rounded-l-md border border-input bg-muted px-3 py-1 text-sm font-mono" />
+                                <button type="button" @onclick="ToggleKeyVisibility"
+                                        class="h-9 px-3 border border-l-0 border-input bg-background hover:bg-muted transition-colors">
+                                    @if (ShowKey)
+                                    {
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    }
+                                </button>
+                                <button type="button" @onclick="CopyToClipboard"
+                                        class="h-9 px-3 border border-l-0 border-input rounded-r-md bg-background hover:bg-muted transition-colors"
+                                        title="Copy to clipboard">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    @* Permissions *@
+                    <div>
+                        <h3 class="text-sm font-medium mb-2">Permissions</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li class="flex items-center">
+                                @if (User.CanPushPackages)
+                                {
+                                    <svg class="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <svg class="h-5 w-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                }
+                                Push packages
+                            </li>
+                            <li class="flex items-center">
+                                @if (User.CanDeletePackages)
+                                {
+                                    <svg class="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <svg class="h-5 w-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                }
+                                Delete packages
+                            </li>
+                        </ul>
+                    </div>
+
+                    <Separator />
+
+                    @* Usage *@
+                    <div>
+                        <h3 class="text-sm font-medium mb-2">Usage</h3>
+                        <div class="bg-gray-900 rounded-md p-4 overflow-x-auto">
+                            <pre class="text-sm text-gray-100"><code>dotnet nuget push MyPackage.1.0.0.nupkg \
+  --source @GetBaseUrl() \
+  --api-key YOUR_API_KEY</code></pre>
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    @* Regenerate *@
+                    <div>
+                        <h3 class="text-sm font-medium mb-2">Regenerate API Key</h3>
+                        <p class="text-sm text-muted-foreground mb-3">
+                            If your API key has been compromised, you can regenerate it. This will invalidate your current key.
+                        </p>
+                        <Button Variant="Button.ButtonVariant.Destructive" OnClick="ShowRegenerateConfirm">
+                            Regenerate API Key
+                        </Button>
+                    </div>
+                </div>
+            }
+        </CardContent>
+    </Card>
+</div>
+
+@* Confirmation Dialog (simple approach) *@
+@if (ShowConfirmDialog)
+{
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @onclick="HideConfirmDialog">
+        <Card Class="max-w-md mx-4" @onclick:stopPropagation="true">
+            <CardHeader>
+                <CardTitle>Regenerate API Key?</CardTitle>
+                <CardDescription>
+                    Your current API key will stop working immediately. Any integrations using this key will need to be updated.
+                </CardDescription>
+            </CardHeader>
+            <CardContent Class="flex gap-2 justify-end">
+                <Button Variant="Button.ButtonVariant.Outline" OnClick="HideConfirmDialog">Cancel</Button>
+                <Button Variant="Button.ButtonVariant.Destructive" OnClick="RegenerateKey">Regenerate</Button>
+            </CardContent>
+        </Card>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private ApplicationUser? User { get; set; }
+    private bool ShowKey { get; set; }
+    private string? StatusMessage { get; set; }
+    private bool ShowConfirmDialog { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationState != null)
+        {
+            var authState = await AuthenticationState;
+            User = await UserManager.GetUserAsync(authState.User);
+        }
+    }
+
+    private void ToggleKeyVisibility()
+    {
+        ShowKey = !ShowKey;
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (User?.ApiKey != null)
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", User.ApiKey);
+            StatusMessage = "API key copied to clipboard!";
+            StateHasChanged();
+            await Task.Delay(3000);
+            StatusMessage = null;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowRegenerateConfirm()
+    {
+        ShowConfirmDialog = true;
+    }
+
+    private void HideConfirmDialog()
+    {
+        ShowConfirmDialog = false;
+    }
+
+    private async Task RegenerateKey()
+    {
+        if (User != null)
+        {
+            User.ApiKey = IdentityUtilities.GenerateApiKey();
+            User.ApiKeyCreated = DateTime.UtcNow;
+            await UserManager.UpdateAsync(User);
+            StatusMessage = "Your API key has been regenerated.";
+            ShowConfirmDialog = false;
+        }
+    }
+
+    private string GetBaseUrl()
+    {
+        var uri = new Uri(Navigation.Uri);
+        return $"{uri.Scheme}://{uri.Host}{(uri.IsDefaultPort ? "" : $":{uri.Port}")}";
+    }
+}

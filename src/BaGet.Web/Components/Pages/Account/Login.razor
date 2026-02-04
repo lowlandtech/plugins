@@ -1,0 +1,116 @@
+@page "/account/login"
+@using BaGet.Core.Identity
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
+
+<PageTitle>Sign In - BaGet</PageTitle>
+
+<div class="min-h-[60vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <Card Class="max-w-md w-full">
+        <CardHeader Class="text-center">
+            <CardTitle Class="text-2xl">Sign in to your account</CardTitle>
+            <CardDescription>
+                Or <a href="/account/register" class="text-primary hover:underline">create a new account</a>
+            </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+            <EditForm Model="@Input" OnValidSubmit="HandleLogin" FormName="login">
+                <DataAnnotationsValidator />
+
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <Alert Variant="Alert.AlertVariant.Destructive" Class="mb-4">
+                        @ErrorMessage
+                    </Alert>
+                }
+
+                <div class="space-y-4">
+                    <div>
+                        <Label For="email">Email address</Label>
+                        <InputText @bind-Value="Input.Email" id="email" type="email" autocomplete="email"
+                                   class="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                        <ValidationMessage For="@(() => Input.Email)" class="text-sm text-destructive mt-1" />
+                    </div>
+
+                    <div>
+                        <Label For="password">Password</Label>
+                        <InputText @bind-Value="Input.Password" id="password" type="password" autocomplete="current-password"
+                                   class="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                        <ValidationMessage For="@(() => Input.Password)" class="text-sm text-destructive mt-1" />
+                    </div>
+
+                    <div class="flex items-center">
+                        <InputCheckbox @bind-Value="Input.RememberMe" id="remember"
+                                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+                        <Label For="remember" Class="ml-2">Remember me</Label>
+                    </div>
+
+                    <Button Type="submit" Class="w-full" Disabled="@IsSubmitting">
+                        @if (IsSubmitting)
+                        {
+                            <span>Signing in...</span>
+                        }
+                        else
+                        {
+                            <span>Sign in</span>
+                        }
+                    </Button>
+                </div>
+            </EditForm>
+        </CardContent>
+    </Card>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private LoginInput Input { get; set; } = new();
+    private string? ErrorMessage { get; set; }
+    private bool IsSubmitting { get; set; }
+
+    private async Task HandleLogin()
+    {
+        IsSubmitting = true;
+        ErrorMessage = null;
+        StateHasChanged();
+
+        var result = await SignInManager.PasswordSignInAsync(
+            Input.Email,
+            Input.Password,
+            Input.RememberMe,
+            lockoutOnFailure: true);
+
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
+            return;
+        }
+
+        if (result.IsLockedOut)
+        {
+            ErrorMessage = "Account locked out. Please try again later.";
+        }
+        else
+        {
+            ErrorMessage = "Invalid login attempt.";
+        }
+
+        IsSubmitting = false;
+    }
+
+    private class LoginInput
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        public bool RememberMe { get; set; }
+    }
+}
