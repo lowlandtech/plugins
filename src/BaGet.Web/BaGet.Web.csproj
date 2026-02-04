@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BaGet.Core\BaGet.Core.csproj" />
+    <ProjectReference Include="..\BaGet.Components\BaGet.Components.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,22 @@
+@namespace BaGet.Components.UI
+
+@if (IsActive)
+{
+    <div role="tabpanel" class="@ComputedClass" @attributes="AdditionalAttributes">
+        @ChildContent
+    </div>
+}
+
+@code {
+    [CascadingParameter] public Tabs? Parent { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool IsActive => Parent?.ActiveTab == Value;
+
+    private string ComputedClass => string.Join(" ",
+        "mt-2 ring-offset-[hsl(var(--background))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2",
+        Class ?? "");
+}

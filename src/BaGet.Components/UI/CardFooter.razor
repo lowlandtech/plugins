@@ -1,0 +1,15 @@
+@namespace BaGet.Components.UI
+
+<div class="@ComputedClass" @attributes="AdditionalAttributes">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string ComputedClass => string.Join(" ",
+        "flex items-center p-6 pt-0",
+        Class ?? "");
+}

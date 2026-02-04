@@ -3,6 +3,7 @@ using BaGet.Core;
 using BaGet.Core.Identity;
 using BaGet.Database.PostgreSql;
 using BaGet.Web;
+using BaGet.Web.Components;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
@@ -55,6 +56,10 @@ namespace BaGet
             services.AddSingleton<IConfigureOptions<MvcRazorRuntimeCompilationOptions>, ConfigureRazorRuntimeCompilation>();
 
             services.AddCors();
+
+            // Add Blazor components
+            services.AddRazorComponents()
+                .AddInteractiveServerComponents();
 
             // Add ASP.NET Identity with PostgreSQL storage
             services.AddBaGetIdentityServices();
@@ -118,11 +123,17 @@ namespace BaGet
 
             app.UseOperationCancelledMiddleware();
 
+            app.UseAntiforgery();
+
             app.UseEndpoints(endpoints =>
             {
                 var baget = new BaGetEndpointBuilder();
 
                 baget.MapEndpoints(endpoints);
+
+                // Map Blazor components
+                endpoints.MapRazorComponents<App>()
+                    .AddInteractiveServerRenderMode();
             });
         }
     }

@@ -1,0 +1,470 @@
+@page "/packages/{Id}"
+@page "/packages/{Id}/{Version}"
+@using BaGet.Core
+@using Humanizer
+@using Markdig
+@using NuGet.Frameworks
+@using NuGet.Versioning
+@inject IPackageService PackageService
+@inject IPackageContentService ContentService
+@inject ISearchService SearchService
+@inject IUrlGenerator UrlGenerator
+@inject NavigationManager Navigation
+
+<PageTitle>@(Package?.Id ?? Id) - BaGet</PageTitle>
+
+@if (IsLoading)
+{
+    <div class="space-y-6">
+        <Skeleton Class="h-8 w-1/3" />
+        <Card>
+            <CardContent Class="p-6">
+                <div class="flex gap-6">
+                    <Skeleton Class="w-24 h-24 rounded" />
+                    <div class="flex-1 space-y-4">
+                        <Skeleton Class="h-6 w-1/2" />
+                        <Skeleton Class="h-4 w-3/4" />
+                        <Skeleton Class="h-4 w-1/4" />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    </div>
+}
+else if (!Found)
+{
+    <Card>
+        <CardContent Class="p-8 text-center">
+            <svg class="mx-auto h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 class="text-lg font-semibold text-foreground mb-2">Package not found</h3>
+            <p class="text-muted-foreground mb-4">The package "@Id" could not be found.</p>
+            <Button OnClick="@(() => Navigation.NavigateTo("/"))">
+                Back to Search
+            </Button>
+        </CardContent>
+    </Card>
+}
+else
+{
+    <div class="space-y-6">
+        @* Package Header *@
+        <Card>
+            <CardContent Class="p-6">
+                <div class="flex flex-col md:flex-row gap-6">
+                    @* Icon *@
+                    <div class="shrink-0">
+                        @if (!string.IsNullOrEmpty(IconUrl))
+                        {
+                            <img src="@IconUrl" alt="@Package.Id" class="w-24 h-24 rounded" onerror="this.style.display='none'" />
+                        }
+                        else
+                        {
+                            <div class="w-24 h-24 rounded bg-muted flex items-center justify-center">
+                                <svg class="w-12 h-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                            </div>
+                        }
+                    </div>
+
+                    @* Package Info *@
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap mb-2">
+                            <h1 class="text-2xl font-bold text-foreground">@Package.Id</h1>
+                            <Badge>@Package.Version</Badge>
+                            @if (IsDotnetTool)
+                            {
+                                <Badge Variant="Badge.BadgeVariant.Secondary">dotnet Tool</Badge>
+                            }
+                            @if (IsDotnetTemplate)
+                            {
+                                <Badge Variant="Badge.BadgeVariant.Secondary">Template</Badge>
+                            }
+                        </div>
+
+                        <p class="text-muted-foreground mb-4">@Package.Description</p>
+
+                        <div class="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                            @if (Package.Authors?.Any() == true)
+                            {
+                                <span>
+                                    <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    @string.Join(", ", Package.Authors)
+                                </span>
+                            }
+                            <span>
+                                <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                @TotalDownloads.ToMetric() downloads
+                            </span>
+                            <span>
+                                <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Updated @LastUpdated.Humanize()
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
+        @* Actions *@
+        <div class="grid md:grid-cols-3 gap-4">
+            <Card>
+                <CardHeader>
+                    <CardTitle Class="text-sm">Install via CLI</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <code class="text-xs bg-muted p-2 rounded block overflow-x-auto">
+                        dotnet add package @Package.Id --version @Package.Version
+                    </code>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle Class="text-sm">PackageReference</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <code class="text-xs bg-muted p-2 rounded block overflow-x-auto">
+                        &lt;PackageReference Include="@Package.Id" Version="@Package.Version" /&gt;
+                    </code>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle Class="text-sm">Download</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <a href="@PackageDownloadUrl" class="text-primary hover:underline text-sm">
+                        Download .nupkg
+                    </a>
+                </CardContent>
+            </Card>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+            @* Main Content *@
+            <div class="lg:col-span-2 space-y-6">
+                @* Readme *@
+                @if (ReadmeHtml != null)
+                {
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>README</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="prose prose-sm max-w-none">
+                                @((MarkupString)ReadmeHtml)
+                            </div>
+                        </CardContent>
+                    </Card>
+                }
+
+                @* Dependencies *@
+                @if (DependencyGroups?.Any() == true)
+                {
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Dependencies</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="space-y-4">
+                                @foreach (var group in DependencyGroups)
+                                {
+                                    <div>
+                                        <h4 class="font-medium text-sm mb-2">@group.Name</h4>
+                                        @if (group.Dependencies.Any())
+                                        {
+                                            <ul class="space-y-1">
+                                                @foreach (var dep in group.Dependencies)
+                                                {
+                                                    <li class="text-sm">
+                                                        <a href="/packages/@dep.PackageId" class="text-primary hover:underline">@dep.PackageId</a>
+                                                        @if (!string.IsNullOrEmpty(dep.VersionSpec))
+                                                        {
+                                                            <span class="text-muted-foreground">@dep.VersionSpec</span>
+                                                        }
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+                                        else
+                                        {
+                                            <p class="text-sm text-muted-foreground">No dependencies</p>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </CardContent>
+                    </Card>
+                }
+            </div>
+
+            @* Sidebar *@
+            <div class="space-y-6">
+                @* Versions *@
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Versions</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ul class="space-y-2 max-h-64 overflow-y-auto">
+                            @foreach (var v in Versions.Take(10))
+                            {
+                                <li class="flex items-center justify-between text-sm @(v.Selected ? "font-medium" : "")">
+                                    <a href="/packages/@Package.Id/@v.Version" class="@(v.Selected ? "text-primary" : "hover:text-primary")">
+                                        @v.Version
+                                    </a>
+                                    <span class="text-muted-foreground text-xs">@v.Downloads.ToMetric()</span>
+                                </li>
+                            }
+                        </ul>
+                    </CardContent>
+                </Card>
+
+                @* Links *@
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Links</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ul class="space-y-2 text-sm">
+                            @if (!string.IsNullOrEmpty(Package.ProjectUrlString))
+                            {
+                                <li>
+                                    <a href="@Package.ProjectUrlString" target="_blank" class="text-primary hover:underline flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                        </svg>
+                                        Project Website
+                                    </a>
+                                </li>
+                            }
+                            @if (!string.IsNullOrEmpty(Package.RepositoryUrlString))
+                            {
+                                <li>
+                                    <a href="@Package.RepositoryUrlString" target="_blank" class="text-primary hover:underline flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+                                        </svg>
+                                        Source Repository
+                                    </a>
+                                </li>
+                            }
+                            @if (!string.IsNullOrEmpty(LicenseUrl))
+                            {
+                                <li>
+                                    <a href="@LicenseUrl" target="_blank" class="text-primary hover:underline flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        License
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </CardContent>
+                </Card>
+
+                @* Used By *@
+                @if (UsedBy?.Any() == true)
+                {
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Used By</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ul class="space-y-2 text-sm">
+                                @foreach (var dep in UsedBy.Take(5))
+                                {
+                                    <li>
+                                        <a href="/packages/@dep.Id" class="text-primary hover:underline">@dep.Id</a>
+                                    </li>
+                                }
+                            </ul>
+                        </CardContent>
+                    </Card>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
+    [Parameter] public string Id { get; set; } = "";
+    [Parameter] public string? Version { get; set; }
+
+    private bool IsLoading { get; set; } = true;
+    private bool Found { get; set; }
+    private Package? Package { get; set; }
+    private bool IsDotnetTemplate { get; set; }
+    private bool IsDotnetTool { get; set; }
+    private DateTime LastUpdated { get; set; }
+    private long TotalDownloads { get; set; }
+    private string? IconUrl { get; set; }
+    private string? LicenseUrl { get; set; }
+    private string? PackageDownloadUrl { get; set; }
+    private string? ReadmeHtml { get; set; }
+    private IReadOnlyList<PackageDependent>? UsedBy { get; set; }
+    private IReadOnlyList<DependencyGroupModel>? DependencyGroups { get; set; }
+    private IReadOnlyList<VersionModel>? Versions { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadPackage();
+    }
+
+    private async Task LoadPackage()
+    {
+        IsLoading = true;
+        StateHasChanged();
+
+        var packages = await PackageService.FindPackagesAsync(Id, CancellationToken.None);
+        var listedPackages = packages.Where(p => p.Listed).ToList();
+
+        // Try to find the requested version
+        if (NuGetVersion.TryParse(Version, out var requestedVersion))
+        {
+            Package = packages.SingleOrDefault(p => p.Version == requestedVersion);
+        }
+
+        // Otherwise try to display the latest version
+        Package ??= listedPackages.OrderByDescending(p => p.Version).FirstOrDefault();
+
+        if (Package == null)
+        {
+            Found = false;
+            IsLoading = false;
+            return;
+        }
+
+        var packageVersion = Package.Version;
+
+        Found = true;
+        IsDotnetTemplate = Package.PackageTypes.Any(t => t.Name.Equals("Template", StringComparison.OrdinalIgnoreCase));
+        IsDotnetTool = Package.PackageTypes.Any(t => t.Name.Equals("DotnetTool", StringComparison.OrdinalIgnoreCase));
+        LastUpdated = packages.Max(p => p.Published);
+        TotalDownloads = packages.Sum(p => p.Downloads);
+
+        var dependents = await SearchService.FindDependentsAsync(Package.Id, CancellationToken.None);
+        UsedBy = dependents.Data;
+        DependencyGroups = ToDependencyGroups(Package);
+        Versions = ToVersions(listedPackages, packageVersion);
+
+        if (Package.HasReadme)
+        {
+            ReadmeHtml = await GetReadmeHtmlAsync(Package.Id, packageVersion);
+        }
+
+        IconUrl = Package.HasEmbeddedIcon
+            ? UrlGenerator.GetPackageIconDownloadUrl(Package.Id, packageVersion)
+            : Package.IconUrlString;
+        LicenseUrl = Package.LicenseUrlString;
+        PackageDownloadUrl = UrlGenerator.GetPackageDownloadUrl(Package.Id, packageVersion);
+
+        IsLoading = false;
+    }
+
+    private IReadOnlyList<DependencyGroupModel> ToDependencyGroups(Package package)
+    {
+        return package.Dependencies
+            .GroupBy(d => d.TargetFramework)
+            .Select(group => new DependencyGroupModel
+            {
+                Name = PrettifyTargetFramework(group.Key),
+                Dependencies = group
+                    .Where(d => d.Id != null)
+                    .Select(d => new DependencyModel
+                    {
+                        PackageId = d.Id!,
+                        VersionSpec = d.VersionRange != null ? VersionRange.Parse(d.VersionRange).PrettyPrint() : ""
+                    })
+                    .ToList()
+            })
+            .ToList();
+    }
+
+    private string PrettifyTargetFramework(string? targetFramework)
+    {
+        if (targetFramework == null) return "All Frameworks";
+
+        try
+        {
+            var framework = NuGetFramework.Parse(targetFramework);
+            string frameworkName = framework.Framework switch
+            {
+                var f when f.Equals(FrameworkConstants.FrameworkIdentifiers.NetCoreApp, StringComparison.OrdinalIgnoreCase) =>
+                    framework.Version.Major >= 5 ? ".NET" : ".NET Core",
+                var f when f.Equals(FrameworkConstants.FrameworkIdentifiers.NetStandard, StringComparison.OrdinalIgnoreCase) =>
+                    ".NET Standard",
+                var f when f.Equals(FrameworkConstants.FrameworkIdentifiers.Net, StringComparison.OrdinalIgnoreCase) =>
+                    ".NET Framework",
+                _ => framework.Framework
+            };
+
+            var frameworkVersion = framework.Version.Build == 0
+                ? framework.Version.ToString(2)
+                : framework.Version.ToString(3);
+
+            return $"{frameworkName} {frameworkVersion}";
+        }
+        catch
+        {
+            return targetFramework;
+        }
+    }
+
+    private IReadOnlyList<VersionModel> ToVersions(IReadOnlyList<Package> packages, NuGetVersion selectedVersion)
+    {
+        return packages
+            .Select(p => new VersionModel
+            {
+                Version = p.Version,
+                Downloads = p.Downloads,
+                Selected = p.Version == selectedVersion,
+                LastUpdated = p.Published
+            })
+            .OrderByDescending(m => m.Version)
+            .ToList();
+    }
+
+    private async Task<string?> GetReadmeHtmlAsync(string packageId, NuGetVersion packageVersion)
+    {
+        using var readmeStream = await ContentService.GetPackageReadmeStreamOrNullAsync(packageId, packageVersion, CancellationToken.None);
+        if (readmeStream == null) return null;
+
+        using var reader = new StreamReader(readmeStream);
+        var readme = await reader.ReadToEndAsync();
+        return Markdown.ToHtml(readme, MarkdownPipeline);
+    }
+
+    private class DependencyGroupModel
+    {
+        public string Name { get; set; } = "";
+        public IReadOnlyList<DependencyModel> Dependencies { get; set; } = Array.Empty<DependencyModel>();
+    }
+
+    private class DependencyModel
+    {
+        public string PackageId { get; set; } = "";
+        public string VersionSpec { get; set; } = "";
+    }
+
+    private class VersionModel
+    {
+        public NuGetVersion Version { get; set; } = default!;
+        public long Downloads { get; set; }
+        public bool Selected { get; set; }
+        public DateTime LastUpdated { get; set; }
+    }
+}

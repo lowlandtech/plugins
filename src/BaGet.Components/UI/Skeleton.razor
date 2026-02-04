@@ -1,0 +1,12 @@
+@namespace BaGet.Components.UI
+
+<div class="@ComputedClass" @attributes="AdditionalAttributes"></div>
+
+@code {
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string ComputedClass => string.Join(" ",
+        "animate-pulse rounded-md bg-[hsl(var(--primary))]/10",
+        Class ?? "");
+}
