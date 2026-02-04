@@ -4,10 +4,10 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.Search;
-using Microsoft.Azure.Search.Models;
+using Azure;
+using Azure.Search.Documents;
+using Azure.Search.Documents.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Rest.Azure;
 
 namespace BaGet.Azure
 {
@@ -18,21 +18,19 @@ namespace BaGet.Azure
         /// </summary>
         public const int MaxBatchSize = 1000;
 
-        private readonly ISearchIndexClient _indexClient;
+        private readonly SearchClient _searchClient;
         private readonly ILogger<AzureSearchBatchIndexer> _logger;
 
         public AzureSearchBatchIndexer(
-            SearchServiceClient searchClient,
+            SearchClient searchClient,
             ILogger<AzureSearchBatchIndexer> logger)
         {
-            if (searchClient == null) throw new ArgumentNullException(nameof(searchClient));
-
-            _indexClient = searchClient.Indexes.GetClient(PackageDocument.IndexName);
+            _searchClient = searchClient ?? throw new ArgumentNullException(nameof(searchClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task IndexAsync(
-            IReadOnlyList<IndexAction<KeyedDocument>> batch,
+            IReadOnlyList<IndexDocumentsAction<PackageDocument>> batch,
             CancellationToken cancellationToken)
         {
             if (batch.Count > MaxBatchSize)
@@ -42,32 +40,20 @@ namespace BaGet.Azure
                     nameof(batch));
             }
 
-            IList<IndexingResult> indexingResults = null;
-            Exception innerException = null;
-
             try
             {
-                await _indexClient.Documents.IndexAsync(
-                    IndexBatch.New(batch),
-                    cancellationToken: cancellationToken);
+                var indexBatch = IndexDocumentsBatch.Create(batch.ToArray());
+                await _searchClient.IndexDocumentsAsync(indexBatch, cancellationToken: cancellationToken);
 
                 _logger.LogInformation("Pushed batch of {DocumentCount} documents", batch.Count);
-
             }
-            catch (IndexBatchException ex)
-            {
-                _logger.LogError(ex, "An exception was thrown when pushing batch of documents");
-                indexingResults = ex.IndexingResults;
-                innerException = ex;
-            }
-            catch (CloudException ex) when (ex.Response.StatusCode == HttpStatusCode.RequestEntityTooLarge && batch.Count > 1)
+            catch (RequestFailedException ex) when (ex.Status == (int)HttpStatusCode.RequestEntityTooLarge && batch.Count > 1)
             {
                 var halfCount = batch.Count / 2;
                 var halfA = batch.Take(halfCount).ToList();
                 var halfB = batch.Skip(halfCount).ToList();
 
                 _logger.LogWarning(
-                    0,
                     ex,
                     "The request body for a batch of {BatchSize} was too large. Splitting into two batches of size " +
                     "{HalfA} and {HalfB}.",
@@ -77,11 +63,6 @@ namespace BaGet.Azure
 
                 await IndexAsync(halfA, cancellationToken);
                 await IndexAsync(halfB, cancellationToken);
-            }
-
-            if (indexingResults != null && indexingResults.Any(result => !result.Succeeded))
-            {
-                throw new InvalidOperationException("Failed to pushed batch of documents documents");
             }
         }
     }

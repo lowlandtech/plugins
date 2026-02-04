@@ -58,10 +58,8 @@ namespace BaGet
         {
             // Add database providers.
             app.AddAzureTableDatabase();
-            app.AddMySqlDatabase();
             app.AddPostgreSqlDatabase();
             app.AddSqliteDatabase();
-            app.AddSqlServerDatabase();
 
             // Add storage providers.
             app.AddFileStorage();

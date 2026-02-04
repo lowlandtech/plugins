@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
+using Azure.Data.Tables;
 using BaGet.Core;
 using BaGet.Protocol.Models;
-using Microsoft.Azure.Cosmos.Table;
 
 namespace BaGet.Azure
 {
@@ -13,14 +14,14 @@ namespace BaGet.Azure
     {
         private const string TableName = "Packages";
 
-        private readonly CloudTable _table;
+        private readonly TableClient _table;
         private readonly ISearchResponseBuilder _responseBuilder;
 
         public TableSearchService(
-            CloudTableClient client,
+            TableServiceClient tableService,
             ISearchResponseBuilder responseBuilder)
         {
-            _table = client?.GetTableReference(TableName) ?? throw new ArgumentNullException(nameof(client));
+            _table = tableService?.GetTableClient(TableName) ?? throw new ArgumentNullException(nameof(tableService));
             _responseBuilder = responseBuilder ?? throw new ArgumentNullException(nameof(responseBuilder));
         }
 
@@ -75,16 +76,15 @@ namespace BaGet.Azure
         }
 
         private async Task<List<PackageRegistration>> SearchAsync(
-            string searchText,
+            string? searchText,
             int skip,
             int take,
             bool includePrerelease,
             bool includeSemVer2,
             CancellationToken cancellationToken)
         {
-            var query = new TableQuery<PackageEntity>();
-            query = query.Where(GenerateSearchFilter(searchText, includePrerelease, includeSemVer2));
-            query.TakeCount = 500;
+            var filter = GenerateSearchFilter(searchText, includePrerelease, includeSemVer2);
+            var query = _table.QueryAsync<PackageEntity>(filter: filter, maxPerPage: 500, cancellationToken: cancellationToken);
 
             var results = await LoadPackagesAsync(query, maxPartitions: skip + take, cancellationToken);
 
@@ -97,113 +97,64 @@ namespace BaGet.Azure
         }
 
         private async Task<IReadOnlyList<Package>> LoadPackagesAsync(
-            TableQuery<PackageEntity> query,
+            AsyncPageable<PackageEntity> query,
             int maxPartitions,
             CancellationToken cancellationToken)
         {
             var results = new List<Package>();
 
             var partitions = 0;
-            string lastPartitionKey = null;
-            TableContinuationToken token = null;
-            do
+            string? lastPartitionKey = null;
+
+            await foreach (var result in query.WithCancellation(cancellationToken))
             {
-                var segment = await _table.ExecuteQuerySegmentedAsync(query, token, cancellationToken);
-
-                token = segment.ContinuationToken;
-
-                foreach (var result in segment.Results)
+                if (lastPartitionKey != result.PartitionKey)
                 {
-                    if (lastPartitionKey != result.PartitionKey)
+                    lastPartitionKey = result.PartitionKey;
+                    partitions++;
+
+                    if (partitions > maxPartitions)
                     {
-                        lastPartitionKey = result.PartitionKey;
-                        partitions++;
-
-                        if (partitions > maxPartitions)
-                        {
-                            break;
-                        }
+                        break;
                     }
-
-                    results.Add(result.AsPackage());
                 }
+
+                results.Add(result.AsPackage());
             }
-            while (token != null);
 
             return results;
         }
 
-        private string GenerateSearchFilter(string searchText, bool includePrerelease, bool includeSemVer2)
+        private string GenerateSearchFilter(string? searchText, bool includePrerelease, bool includeSemVer2)
         {
-            var result = "";
+            var filters = new List<string>();
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 // Filter to rows where the "searchText" prefix matches on the partition key.
-                var prefix = searchText.TrimEnd().Split(separator: null).Last();
+                var prefix = searchText.TrimEnd().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Last();
 
                 var prefixLower = prefix;
                 var prefixUpper = prefix + "~";
 
-                var partitionLowerFilter = TableQuery.GenerateFilterCondition(
-                    "PartitionKey",
-                    QueryComparisons.GreaterThanOrEqual,
-                    prefixLower);
-
-                var partitionUpperFilter = TableQuery.GenerateFilterCondition(
-                    "PartitionKey",
-                    QueryComparisons.LessThanOrEqual,
-                    prefixUpper);
-
-                result = GenerateAnd(partitionLowerFilter, partitionUpperFilter);
+                filters.Add($"PartitionKey ge '{prefixLower}'");
+                filters.Add($"PartitionKey le '{prefixUpper}'");
             }
 
             // Filter to rows that are listed.
-            result = GenerateAnd(
-                result,
-                GenerateIsTrue(nameof(PackageEntity.Listed)));
+            filters.Add("Listed eq true");
 
             if (!includePrerelease)
             {
-                result = GenerateAnd(
-                    result,
-                    GenerateIsFalse(nameof(PackageEntity.IsPrerelease)));
+                filters.Add("IsPrerelease eq false");
             }
 
             if (!includeSemVer2)
             {
-                result = GenerateAnd(
-                    result,
-                    TableQuery.GenerateFilterConditionForInt(
-                        nameof(PackageEntity.SemVerLevel),
-                        QueryComparisons.Equal,
-                        0));
+                filters.Add("SemVerLevel eq 0");
             }
 
-            return result;
-
-            string GenerateAnd(string left, string right)
-            {
-                if (string.IsNullOrEmpty(left)) return right;
-
-                return TableQuery.CombineFilters(left, TableOperators.And, right);
-            }
-
-            string GenerateIsTrue(string propertyName)
-            {
-                return TableQuery.GenerateFilterConditionForBool(
-                    propertyName,
-                    QueryComparisons.Equal,
-                    givenValue: true);
-            }
-
-            string GenerateIsFalse(string propertyName)
-            {
-                return TableQuery.GenerateFilterConditionForBool(
-                    propertyName,
-                    QueryComparisons.Equal,
-                    givenValue: false);
-            }
+            return string.Join(" and ", filters);
         }
     }
 }

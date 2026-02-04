@@ -4,24 +4,23 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Search.Documents;
+using Azure.Search.Documents.Models;
 using BaGet.Core;
 using BaGet.Protocol.Models;
-using Microsoft.Azure.Search;
 using NuGet.Versioning;
+using SearchDocumentOptions = global::Azure.Search.Documents.SearchOptions;
 
 namespace BaGet.Azure
 {
-    using QueryType = Microsoft.Azure.Search.Models.QueryType;
-    using SearchParameters = Microsoft.Azure.Search.Models.SearchParameters;
-
     public class AzureSearchService : ISearchService
     {
-        private readonly SearchIndexClient _searchClient;
+        private readonly SearchClient _searchClient;
         private readonly IUrlGenerator _url;
         private readonly IFrameworkCompatibilityService _frameworks;
 
         public AzureSearchService(
-            SearchIndexClient searchClient,
+            SearchClient searchClient,
             IUrlGenerator url,
             IFrameworkCompatibilityService frameworks)
         {
@@ -34,60 +33,60 @@ namespace BaGet.Azure
             SearchRequest request,
             CancellationToken cancellationToken)
         {
-            var searchText = BuildSeachQuery(request.Query, request.PackageType, request.Framework);
+            var searchText = BuildSearchQuery(request.Query, request.PackageType, request.Framework);
             var filter = BuildSearchFilter(request.IncludePrerelease, request.IncludeSemVer2);
-            var parameters = new SearchParameters
+            var options = new SearchDocumentOptions
             {
-                IncludeTotalResultCount = true,
-                QueryType = QueryType.Full,
+                IncludeTotalCount = true,
+                QueryType = SearchQueryType.Full,
                 Skip = request.Skip,
-                Top = request.Take,
+                Size = request.Take,
                 Filter = filter
             };
 
-            var response = await _searchClient.Documents.SearchAsync<PackageDocument>(
+            var response = await _searchClient.SearchAsync<PackageDocument>(
                 searchText,
-                parameters,
-                cancellationToken: cancellationToken);
+                options,
+                cancellationToken);
 
             var results = new List<SearchResult>();
 
-            foreach (var result in response.Results)
+            await foreach (var result in response.Value.GetResultsAsync().WithCancellation(cancellationToken))
             {
                 var document = result.Document;
                 var versions = new List<SearchResultVersion>();
 
-                if (document.Versions.Length != document.VersionDownloads.Length)
+                if (document.Versions?.Length != document.VersionDownloads?.Length)
                 {
                     throw new InvalidOperationException($"Invalid document {document.Key} with mismatched versions");
                 }
 
-                for (var i = 0; i < document.Versions.Length; i++)
+                for (var i = 0; i < (document.Versions?.Length ?? 0); i++)
                 {
-                    var version = NuGetVersion.Parse(document.Versions[i]);
+                    var version = NuGetVersion.Parse(document.Versions![i]);
 
                     versions.Add(new SearchResultVersion
                     {
-                        RegistrationLeafUrl = _url.GetRegistrationLeafUrl(document.Id, version),
+                        RegistrationLeafUrl = _url.GetRegistrationLeafUrl(document.Id!, version),
                         Version = document.Versions[i],
-                        Downloads = long.Parse(document.VersionDownloads[i]),
+                        Downloads = long.Parse(document.VersionDownloads![i]),
                     });
                 }
 
                 var iconUrl = document.HasEmbeddedIcon
-                    ? _url.GetPackageIconDownloadUrl(document.Id, NuGetVersion.Parse(document.Version))
+                    ? _url.GetPackageIconDownloadUrl(document.Id!, NuGetVersion.Parse(document.Version!))
                     : document.IconUrl;
 
                 results.Add(new SearchResult
                 {
-                    PackageId =  document.Id,
-                    Version = document.Version,
+                    PackageId = document.Id!,
+                    Version = document.Version!,
                     Description = document.Description,
                     Authors = document.Authors,
                     IconUrl = iconUrl,
                     LicenseUrl = document.LicenseUrl,
                     ProjectUrl = document.ProjectUrl,
-                    RegistrationIndexUrl = _url.GetRegistrationIndexUrl(document.Id),
+                    RegistrationIndexUrl = _url.GetRegistrationIndexUrl(document.Id!),
                     Summary = document.Summary,
                     Tags = document.Tags,
                     Title = document.Title,
@@ -98,7 +97,7 @@ namespace BaGet.Azure
 
             return new SearchResponse
             {
-                TotalHits = response.Count.Value,
+                TotalHits = response.Value.TotalCount ?? 0,
                 Data = results,
                 Context = SearchContext.Default(_url.GetPackageMetadataResourceUrl())
             };
@@ -111,27 +110,31 @@ namespace BaGet.Azure
             // TODO: Do a prefix search on the package id field.
             // TODO: Support prerelease, semver2, and package type filters.
             // See: https://github.com/loic-sharma/BaGet/issues/291
-            var parameters = new SearchParameters
+            var options = new SearchDocumentOptions
             {
-                IncludeTotalResultCount = true,
+                IncludeTotalCount = true,
                 Skip = request.Skip,
-                Top = request.Take,
+                Size = request.Take,
             };
 
-            var response = await _searchClient.Documents.SearchAsync<PackageDocument>(
+            var response = await _searchClient.SearchAsync<PackageDocument>(
                 request.Query,
-                parameters,
-                cancellationToken: cancellationToken);
+                options,
+                cancellationToken);
 
-            var results = response.Results
-                .Select(r => r.Document.Id)
-                .ToList()
-                .AsReadOnly();
+            var results = new List<string>();
+            await foreach (var result in response.Value.GetResultsAsync().WithCancellation(cancellationToken))
+            {
+                if (result.Document.Id != null)
+                {
+                    results.Add(result.Document.Id);
+                }
+            }
 
             return new AutocompleteResponse
             {
-                TotalHits = response.Count.Value,
-                Data = results,
+                TotalHits = response.Value.TotalCount ?? 0,
+                Data = results.AsReadOnly(),
                 Context = AutocompleteContext.Default
             };
         }
@@ -151,33 +154,35 @@ namespace BaGet.Azure
         {
             // TODO: Escape packageId.
             var query = $"dependencies:{packageId.ToLowerInvariant()}";
-            var parameters = new SearchParameters
+            var options = new SearchDocumentOptions
             {
-                IncludeTotalResultCount = true,
-                QueryType = QueryType.Full,
+                IncludeTotalCount = true,
+                QueryType = SearchQueryType.Full,
                 Skip = 0,
-                Top = 20,
+                Size = 20,
             };
 
-            var response = await _searchClient.Documents.SearchAsync<PackageDocument>(query, parameters, cancellationToken: cancellationToken);
-            var results = response.Results
-                .Select(r => new PackageDependent
+            var response = await _searchClient.SearchAsync<PackageDocument>(query, options, cancellationToken);
+            var results = new List<PackageDependent>();
+
+            await foreach (var result in response.Value.GetResultsAsync().WithCancellation(cancellationToken))
+            {
+                results.Add(new PackageDependent
                 {
-                    Id = r.Document.Id,
-                    Description = r.Document.Description,
-                    TotalDownloads = r.Document.TotalDownloads
-                })
-                .ToList()
-                .AsReadOnly();
+                    Id = result.Document.Id,
+                    Description = result.Document.Description,
+                    TotalDownloads = result.Document.TotalDownloads
+                });
+            }
 
             return new DependentsResponse
             {
-                TotalHits = response.Count.Value,
-                Data = results
+                TotalHits = response.Value.TotalCount ?? 0,
+                Data = results.AsReadOnly()
             };
         }
 
-        private string BuildSeachQuery(string query, string packageType, string framework)
+        private string BuildSearchQuery(string? query, string? packageType, string? framework)
         {
             var queryBuilder = new StringBuilder();
 

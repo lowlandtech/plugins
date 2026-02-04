@@ -1,20 +1,17 @@
 using System;
+using Azure;
+using Azure.Data.Tables;
+using Azure.Search.Documents;
+using Azure.Storage;
+using Azure.Storage.Blobs;
 using BaGet.Azure;
 using BaGet.Core;
-using Microsoft.Azure.Cosmos.Table;
-using Microsoft.Azure.Search;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace BaGet
 {
-    using CloudStorageAccount = Microsoft.WindowsAzure.Storage.CloudStorageAccount;
-    using StorageCredentials = Microsoft.WindowsAzure.Storage.Auth.StorageCredentials;
-
-    using TableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount;
-
     public static class AzureApplicationExtensions
     {
         public static BaGetApplication AddAzureTableDatabase(this BaGetApplication app)
@@ -31,15 +28,7 @@ namespace BaGet
             app.Services.AddSingleton(provider =>
             {
                 var options = provider.GetRequiredService<IOptions<AzureTableOptions>>().Value;
-
-                return TableStorageAccount.Parse(options.ConnectionString);
-            });
-
-            app.Services.AddTransient(provider =>
-            {
-                var account = provider.GetRequiredService<TableStorageAccount>();
-
-                return account.CreateCloudTableClient();
+                return new TableServiceClient(options.ConnectionString);
             });
 
             app.Services.AddProvider<IPackageDatabase>((provider, config) =>
@@ -89,24 +78,20 @@ namespace BaGet
 
                 if (!string.IsNullOrEmpty(options.ConnectionString))
                 {
-                    return CloudStorageAccount.Parse(options.ConnectionString);
+                    return new BlobServiceClient(options.ConnectionString);
                 }
 
-                return new CloudStorageAccount(
-                    new StorageCredentials(
-                        options.AccountName,
-                        options.AccessKey),
-                    useHttps: true);
+                var serviceUri = new Uri($"https://{options.AccountName}.blob.core.windows.net");
+                var credential = new StorageSharedKeyCredential(options.AccountName, options.AccessKey);
+                return new BlobServiceClient(serviceUri, credential);
             });
 
             app.Services.AddTransient(provider =>
             {
                 var options = provider.GetRequiredService<IOptionsSnapshot<AzureBlobStorageOptions>>().Value;
-                var account = provider.GetRequiredService<CloudStorageAccount>();
+                var serviceClient = provider.GetRequiredService<BlobServiceClient>();
 
-                var client = account.CreateCloudBlobClient();
-
-                return client.GetContainerReference(options.Container);
+                return serviceClient.GetBlobContainerClient(options.Container);
             });
 
             app.Services.AddProvider<IStorageService>((provider, config) =>
@@ -142,17 +127,10 @@ namespace BaGet
             app.Services.AddSingleton(provider =>
             {
                 var options = provider.GetRequiredService<IOptions<AzureSearchOptions>>().Value;
-                var credentials = new SearchCredentials(options.ApiKey);
+                var endpoint = new Uri($"https://{options.AccountName}.search.windows.net");
+                var credential = new AzureKeyCredential(options.ApiKey);
 
-                return new SearchServiceClient(options.AccountName, credentials);
-            });
-
-            app.Services.AddSingleton(provider =>
-            {
-                var options = provider.GetRequiredService<IOptions<AzureSearchOptions>>().Value;
-                var credentials = new SearchCredentials(options.ApiKey);
-
-                return new SearchIndexClient(options.AccountName, PackageDocument.IndexName, credentials);
+                return new SearchClient(endpoint, PackageDocument.IndexName, credential);
             });
 
             app.Services.AddProvider<ISearchService>((provider, config) =>

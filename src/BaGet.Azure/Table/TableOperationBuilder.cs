@@ -1,23 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using Azure;
 using BaGet.Core;
-using Microsoft.Azure.Cosmos.Table;
-using Newtonsoft.Json;
 using NuGet.Versioning;
 
 namespace BaGet.Azure
 {
     public class TableOperationBuilder
     {
-        public TableOperation AddPackage(Package package)
+        public PackageEntity BuildPackageEntity(Package package)
         {
             if (package == null) throw new ArgumentNullException(nameof(package));
 
             var version = package.Version;
             var normalizedVersion = version.ToNormalizedString();
 
-            var entity = new PackageEntity
+            return new PackageEntity
             {
                 PartitionKey = package.Id.ToLowerInvariant(),
                 RowKey = normalizedVersion.ToLowerInvariant(),
@@ -25,7 +25,7 @@ namespace BaGet.Azure
                 Id = package.Id,
                 NormalizedVersion = normalizedVersion,
                 OriginalVersion = version.ToFullString(),
-                Authors = JsonConvert.SerializeObject(package.Authors),
+                Authors = JsonSerializer.Serialize(package.Authors),
                 Description = package.Description,
                 Downloads = package.Downloads,
                 HasReadme = package.HasReadme,
@@ -45,67 +45,44 @@ namespace BaGet.Azure
                 ProjectUrl = package.ProjectUrlString,
                 RepositoryUrl = package.RepositoryUrlString,
                 RepositoryType = package.RepositoryType,
-                Tags = JsonConvert.SerializeObject(package.Tags),
+                Tags = JsonSerializer.Serialize(package.Tags),
                 Dependencies = SerializeList(package.Dependencies, AsDependencyModel),
                 PackageTypes = SerializeList(package.PackageTypes, AsPackageTypeModel),
                 TargetFrameworks = SerializeList(package.TargetFrameworks, f => f.Moniker)
             };
-
-            return TableOperation.Insert(entity);
         }
 
-        public TableOperation UpdateDownloads(string packageId, NuGetVersion packageVersion, long downloads)
+        public PackageDownloadsEntity BuildDownloadsEntity(string packageId, NuGetVersion packageVersion, long downloads)
         {
-            var entity = new PackageDownloadsEntity();
-
-            entity.PartitionKey = packageId.ToLowerInvariant();
-            entity.RowKey = packageVersion.ToNormalizedString().ToLowerInvariant();
-            entity.Downloads = downloads;
-            entity.ETag = "*";
-
-            return TableOperation.Merge(entity);
+            return new PackageDownloadsEntity
+            {
+                PartitionKey = packageId.ToLowerInvariant(),
+                RowKey = packageVersion.ToNormalizedString().ToLowerInvariant(),
+                Downloads = downloads,
+                ETag = ETag.All
+            };
         }
 
-        public TableOperation HardDeletePackage(string packageId, NuGetVersion packageVersion)
+        public (string partitionKey, string rowKey) GetEntityKeys(string packageId, NuGetVersion packageVersion)
         {
-            var entity = new PackageEntity();
-
-            entity.PartitionKey = packageId.ToLowerInvariant();
-            entity.RowKey = packageVersion.ToNormalizedString().ToLowerInvariant();
-            entity.ETag = "*";
-
-            return TableOperation.Delete(entity);
+            return (packageId.ToLowerInvariant(), packageVersion.ToNormalizedString().ToLowerInvariant());
         }
 
-        public TableOperation UnlistPackage(string packageId, NuGetVersion packageVersion)
+        public PackageListingEntity BuildListingEntity(string packageId, NuGetVersion packageVersion, bool listed)
         {
-            var entity = new PackageListingEntity();
-
-            entity.PartitionKey = packageId.ToLowerInvariant();
-            entity.RowKey = packageVersion.ToNormalizedString().ToLowerInvariant();
-            entity.Listed = false;
-            entity.ETag = "*";
-
-            return TableOperation.Merge(entity);
-        }
-
-        public TableOperation RelistPackage(string packageId, NuGetVersion packageVersion)
-        {
-            var entity = new PackageListingEntity();
-
-            entity.PartitionKey = packageId.ToLowerInvariant();
-            entity.RowKey = packageVersion.ToNormalizedString().ToLowerInvariant();
-            entity.Listed = true;
-            entity.ETag = "*";
-
-            return TableOperation.Merge(entity);
+            return new PackageListingEntity
+            {
+                PartitionKey = packageId.ToLowerInvariant(),
+                RowKey = packageVersion.ToNormalizedString().ToLowerInvariant(),
+                Listed = listed,
+                ETag = ETag.All
+            };
         }
 
         private static string SerializeList<TIn, TOut>(IReadOnlyList<TIn> objects, Func<TIn, TOut> map)
         {
             var data = objects.Select(map).ToList();
-
-            return JsonConvert.SerializeObject(data);
+            return JsonSerializer.Serialize(data);
         }
 
         public static DependencyModel AsDependencyModel(PackageDependency dependency)

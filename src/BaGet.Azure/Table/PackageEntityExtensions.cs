@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using BaGet.Core;
-using Newtonsoft.Json;
 
 namespace BaGet.Azure
 {
@@ -12,12 +12,11 @@ namespace BaGet.Azure
         {
             return new Package
             {
-                Id = entity.Id,
+                Id = entity.Id ?? string.Empty,
                 NormalizedVersionString = entity.NormalizedVersion,
                 OriginalVersionString = entity.OriginalVersion,
 
-                // TODO: Convert to System.Text.Json
-                Authors = JsonConvert.DeserializeObject<string[]>(entity.Authors),
+                Authors = Deserialize<string[]>(entity.Authors) ?? Array.Empty<string>(),
                 Description = entity.Description,
                 Downloads = entity.Downloads,
                 HasReadme = entity.HasReadme,
@@ -37,22 +36,36 @@ namespace BaGet.Azure
                 ProjectUrl = ParseUri(entity.ProjectUrl),
                 RepositoryUrl = ParseUri(entity.RepositoryUrl),
                 RepositoryType = entity.RepositoryType,
-                Tags = JsonConvert.DeserializeObject<string[]>(entity.Tags),
+                Tags = Deserialize<string[]>(entity.Tags) ?? Array.Empty<string>(),
                 Dependencies = ParseDependencies(entity.Dependencies),
                 PackageTypes = ParsePackageTypes(entity.PackageTypes),
                 TargetFrameworks = ParseTargetFrameworks(entity.TargetFrameworks),
             };
         }
 
-        private static Uri ParseUri(string input)
+        private static T? Deserialize<T>(string? input) where T : class
+        {
+            if (string.IsNullOrEmpty(input))
+                return null;
+
+            return JsonSerializer.Deserialize<T>(input);
+        }
+
+        private static Uri? ParseUri(string? input)
         {
             return string.IsNullOrEmpty(input) ? null : new Uri(input);
         }
 
-        private static List<PackageDependency> ParseDependencies(string input)
+        private static List<PackageDependency> ParseDependencies(string? input)
         {
-            // TODO: Convert to System.Text.Json
-            return JsonConvert.DeserializeObject<List<DependencyModel>>(input)
+            if (string.IsNullOrEmpty(input))
+                return new List<PackageDependency>();
+
+            var models = JsonSerializer.Deserialize<List<DependencyModel>>(input);
+            if (models == null)
+                return new List<PackageDependency>();
+
+            return models
                 .Select(e => new PackageDependency
                 {
                     Id = e.Id,
@@ -62,10 +75,16 @@ namespace BaGet.Azure
                 .ToList();
         }
 
-        private static List<PackageType> ParsePackageTypes(string input)
+        private static List<PackageType> ParsePackageTypes(string? input)
         {
-            // TODO: Convert to System.Text.Json
-            return JsonConvert.DeserializeObject<List<PackageTypeModel>>(input)
+            if (string.IsNullOrEmpty(input))
+                return new List<PackageType>();
+
+            var models = JsonSerializer.Deserialize<List<PackageTypeModel>>(input);
+            if (models == null)
+                return new List<PackageType>();
+
+            return models
                 .Select(e => new PackageType
                 {
                     Name = e.Name,
@@ -74,10 +93,16 @@ namespace BaGet.Azure
                 .ToList();
         }
 
-        private static List<TargetFramework> ParseTargetFrameworks(string targetFrameworks)
+        private static List<TargetFramework> ParseTargetFrameworks(string? targetFrameworks)
         {
-            // TODO: Convert to System.Text.Json
-            return JsonConvert.DeserializeObject<List<string>>(targetFrameworks)
+            if (string.IsNullOrEmpty(targetFrameworks))
+                return new List<TargetFramework>();
+
+            var frameworks = JsonSerializer.Deserialize<List<string>>(targetFrameworks);
+            if (frameworks == null)
+                return new List<TargetFramework>();
+
+            return frameworks
                 .Select(f => new TargetFramework { Moniker = f })
                 .ToList();
         }
