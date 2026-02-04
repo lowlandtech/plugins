@@ -3,56 +3,70 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="BaGet">
+    <meta name="description" content="BaGet - A lightweight NuGet server">
     <meta name="author" content="Loic Sharma">
 
     <link rel="shortcut icon" href="~/_content/BaGet.Web/favicon.ico">
 
-    <link rel="stylesheet" href="~/_content/BaGet.Web/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/_content/BaGet.Web/lib/office-ui-fabric-core/dist/css/fabric.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#004880',
+                        accent: '#d87e00',
+                    }
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="~/_content/BaGet.Web/css/site.css" />
 
     <title>@ViewData["Title"] - BaGet</title>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen">
     <header>
-
-        <nav class="navbar navbar-inverse" role="navigation">
-            <div class="container">
-                <div class="row">
-                    <div id="navbar" class="col-sm-12">
-                        <ul class="nav navbar-nav" role="tablist">
-                            <li role="presentation"><a asp-area="" asp-page="/Index" role="tab" nav-link><span>Packages</span></a></li>
-                            <li role="presentation"><a asp-area="" asp-page="/Upload" role="tab" nav-link><span>Upload</span></a></li>
-                            <li role="presentation">
-                                <a role="tab" href="https://loic-sharma.github.io/BaGet/" target="_blank" rel="noopener noreferrer">
-                                    <span>Documentation</span>
-                                </a>
-                            </li>
-                        </ul>
+        <nav class="bg-primary">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-14">
+                    <div class="flex items-center space-x-6">
+                        <a asp-area="" asp-page="/Index" class="text-white font-semibold text-lg hover:text-gray-200 transition-colors">
+                            BaGet
+                        </a>
+                        <div class="hidden sm:flex space-x-4">
+                            <a asp-area="" asp-page="/Index" class="text-gray-200 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
+                                Packages
+                            </a>
+                            <a asp-area="" asp-page="/Upload" class="text-gray-200 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
+                                Upload
+                            </a>
+                            <a href="https://loic-sharma.github.io/BaGet/" target="_blank" rel="noopener noreferrer" class="text-gray-200 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
+                                Documentation
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="container search-container">
-                <div class="row">
-                    <form class="col-sm-12" action="@Url.Page("/Index")" method="get">
-                        <div class="input-group">
+
+            <div class="bg-primary/90 border-t border-white/10">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <form action="@Url.Page("/Index")" method="get">
+                        <div class="flex">
                             <input type="text"
                                    name="q"
                                    value="@ViewData["SearchQuery"]"
-                                   class="form-control"
-                                   autoComplete="off"
+                                   class="flex-1 px-4 py-2 border-0 rounded-l-md focus:ring-2 focus:ring-accent focus:outline-none"
+                                   autocomplete="off"
                                    placeholder="Search packages..." />
-
-                            <span class="input-group-btn">
-                                <button type="submit"
-                                        class="btn btn-default"
-                                        title="Search for packages">
-                                    <span class="ms-Icon ms-Icon--Search" aria-hidden="true"></span>
-                                </button>
-                            </span>
+                            <button type="submit"
+                                    class="bg-accent hover:bg-amber-600 text-white px-4 py-2 rounded-r-md transition-colors"
+                                    title="Search for packages">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </button>
                         </div>
-
                         @await RenderSectionAsync("SearchForm", required: false)
                     </form>
                 </div>
@@ -60,14 +74,11 @@
         </nav>
     </header>
 
-    <section role="main" class="container main-container">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         @RenderBody()
-    </section>
+    </main>
 
-    <script src="~/_content/BaGet.Web/lib/alpinejs/dist/alpine.js"></script>
-
-    <script src="~/_content/BaGet.Web/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/_content/BaGet.Web/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script defer src="~/_content/BaGet.Web/lib/alpinejs/dist/cdn.min.js"></script>
     <script src="~/_content/BaGet.Web/js/site.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)

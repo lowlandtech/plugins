@@ -9,54 +9,51 @@
 
 @if (!Model.Found)
 {
-    <div>
-        <h2>Oops, package not found...</h2>
-        <p>Could not find package '@Model.Package.Id'.</p>
-        <p>You can try searching on <a href="https://www.nuget.org/packages?q=@Uri.EscapeDataString(Model.Package.Id)" target="_blank" rel="noopener noreferrer">nuget.org</a> package.</p>
-        <p>Think there's a problem? Consider taking a look at our <a href="https://loic-sharma.github.io/BaGet/" target="_blank" rel="noopener noreferrer">documentation</a> or asking for help on our <a href="https://github.com/loic-sharma/BaGet/issues" target="_blank" rel="noopener noreferrer">GitHub project</a></p>
+    <div class="text-center py-12">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Oops, package not found...</h2>
+        <p class="text-gray-600 mb-2">Could not find package '@Model.Package.Id'.</p>
+        <p class="text-gray-600 mb-6">You can try searching on <a href="https://www.nuget.org/packages?q=@Uri.EscapeDataString(Model.Package.Id)" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">nuget.org</a> package.</p>
+        <p class="text-gray-600">Think there's a problem? Consider taking a look at our <a href="https://loic-sharma.github.io/BaGet/" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">documentation</a> or asking for help on our <a href="https://github.com/loic-sharma/BaGet/issues" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">GitHub project</a></p>
     </div>
 }
 else
 {
-    <div class="row display-package">
-        <aside class="col-sm-1 package-icon">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <aside class="lg:col-span-1 hidden lg:block">
             <img src="@(Model.IconUrl ?? Url.Content("~/_content/BaGet.Web/images/default-package-icon-256x256.png"))"
-                 class="img-responsive"
+                 class="w-16 h-16 rounded"
                  onerror="this.src='@Url.Content("~/_content/BaGet.Web/images/default-package-icon-256x256.png")'"
                  alt="The package icon" />
         </aside>
 
-        <article class="col-sm-8 package-details-main">
-            <div class="package-title">
-                <h1>
+        <article class="lg:col-span-8 space-y-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">
                     @Model.Package.Id
-
-                    <small class="text-nowrap">@Model.Package.NormalizedVersionString</small>
+                    <span class="text-lg font-normal text-gray-500 whitespace-nowrap">@Model.Package.NormalizedVersionString</span>
                 </h1>
             </div>
 
-            <div class="tabbed-info" x-data="{ tabs: tabs, active: tabs[0] }">
-                <ul class="nav">
+            <div class="bg-white rounded-lg border border-gray-200 p-4" x-data="{ tabs: tabs, active: tabs[0] }">
+                <div class="flex border-b border-gray-200 mb-4">
                     <template x-for="tab in tabs" :key="tab.name">
-                        <li x-bind:class="{ active: tab.name === active.name }">
-                            <a href="#" x-text="tab.name" @@click="active = tab"></a>
-                        </li>
-                    </template>
-                </ul>
-
-                <div class="content">
-                    <div class="script" x-text="`${active.prefix} ${active.content}`"></div>
-
-                    <div class="copy-button">
-                        <button class="btn btn-default btn-warning"
-                                type="button"
-                                data-tottle="popover"
-                                data-placement="bottom"
-                                data-content="Copied"
-                                @@click="window.baget.copyTextToClipboard(active.content.join('\n'), $el)">
-                            <i class="ms-Icon ms-Icon--Copy"></i>
+                        <button type="button"
+                                class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
+                                :class="tab.name === active.name ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                                @@click="active = tab"
+                                x-text="tab.name">
                         </button>
-                    </div>
+                    </template>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <code class="flex-1 bg-gray-100 px-3 py-2 rounded text-sm font-mono overflow-x-auto" x-text="`${active.prefix} ${active.content}`"></code>
+                    <button type="button"
+                            class="p-2 bg-accent hover:bg-amber-600 text-white rounded transition-colors"
+                            @@click="window.baget.copyTextToClipboard(active.content.join('\n'), $el)"
+                            title="Copy to clipboard">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    </button>
                 </div>
             </div>
 
@@ -64,14 +61,14 @@ else
                 ExpandableSection(
                     "Readme",
                     expanded: false,
-                    @<div>
+                    @<div class="prose max-w-none">
                         @if (Model.Readme == null)
                         {
-                            <div class="package-description">@Model.Package.Description</div>
+                            <p class="text-gray-700">@Model.Package.Description</p>
                         }
                         else
                         {
-                            <div class="package-readme">@Model.Readme</div>
+                            @Model.Readme
                         }
                     </div>);
             }
@@ -79,33 +76,35 @@ else
             @if (!Model.IsDotnetTemplate && !Model.IsDotnetTool)
             {
                 ExpandableSection("Used By", expanded: false,
-                    @<div class="package-used-by">
+                    @<div>
                         @if (!Model.UsedBy.Any())
                         {
-                            <p>No packages depend on @Model.Package.Id.</p>
+                            <p class="text-gray-600">No packages depend on @Model.Package.Id.</p>
                         }
                         else
                         {
-                            <p>Showing the top 20 packages that depend on @Model.Package.Id.</p>
-                            <div>
-                                <table>
-                                    <thead>
+                            <p class="text-gray-600 mb-4">Showing the top 20 packages that depend on @Model.Package.Id.</p>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
                                         <tr>
-                                            <th class="col-sm-10">Packages</th>
-                                            <th class="col-sm-2">Downloads</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Packages</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Downloads</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody class="divide-y divide-gray-200">
                                         @foreach (var package in Model.UsedBy)
                                         {
                                             <tr>
-                                                <td>
-                                                    <a href="@Url.Page("/Package", new { package.Id })">@package.Id</a>
-                                                    <div>@package.Description</div>
+                                                <td class="px-4 py-3">
+                                                    <a href="@Url.Page("/Package", new { package.Id })" class="text-primary hover:underline font-medium">@package.Id</a>
+                                                    <p class="text-sm text-gray-500 mt-1">@package.Description</p>
                                                 </td>
-                                                <td>
-                                                    <i class="ms-Icon ms-Icon--Download" aria-hidden="true"></i>
-                                                    <span>@package.TotalDownloads.ToString("N0")</span>
+                                                <td class="px-4 py-3 whitespace-nowrap">
+                                                    <span class="flex items-center gap-1 text-gray-600">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                                        @package.TotalDownloads.ToString("N0")
+                                                    </span>
                                                 </td>
                                             </tr>
                                         }
@@ -119,29 +118,26 @@ else
             @if (!string.IsNullOrEmpty(Model.Package.ReleaseNotes))
             {
                 ExpandableSection("Release Notes", expanded: false,
-                    @<div class="package-release-notes">@Model.Package.ReleaseNotes</div>);
+                    @<div class="prose max-w-none text-gray-700">@Model.Package.ReleaseNotes</div>);
             }
 
             @{ ExpandableSection(
                 "Dependencies",
                 expanded: false,
-                @<div class="dependency-groups">
+                @<div>
                     @if (!Model.DependencyGroups.Any())
                     {
-                        @:This package has no dependencies.
+                        <p class="text-gray-600">This package has no dependencies.</p>
                     }
                     else
                     {
                         foreach (var group in Model.DependencyGroups)
                         {
-                            <h4>
-                                <span>@group.Name</span>
-                            </h4>
-
-                            <ul class="list-unstyled dependency-group">
+                            <h4 class="font-semibold text-gray-800 mt-4 mb-2">@group.Name</h4>
+                            <ul class="space-y-1">
                                 @if (!group.Dependencies.Any())
                                 {
-                                    <li>No dependencies.</li>
+                                    <li class="text-gray-600">No dependencies.</li>
                                 }
                                 else
                                 {
@@ -150,11 +146,11 @@ else
                                         <li>
                                             <a asp-page="Package"
                                                asp-route-id="@dependency.PackageId"
-                                               asp-route-version="@null">
+                                               asp-route-version="@null"
+                                               class="text-primary hover:underline">
                                                 @dependency.PackageId
                                             </a>
-
-                                            <span> @dependency.VersionSpec</span>
+                                            <span class="text-gray-500 text-sm">@dependency.VersionSpec</span>
                                         </li>
                                     }
                                 }
@@ -165,94 +161,93 @@ else
             }
 
             @{ ExpandableSection("Versions", expanded: true,
-                @<div class="version-list" x-data="{ showAll: false }">
-                    <table class="table borderless">
-                        <thead>
-                            <tr>
-                                <th>Version</th>
-                                <th>Downloads</th>
-                                <th>Last updated</th>
-                            </tr>
-                        </thead>
-                        <tbody class="no-border">
-                            @for (var i = 0; i < Model.Versions.Count; i++)
-                            {
-                                var version = Model.Versions[i];
-                                var alwaysShow = Json.Serialize(i < DefaultVisibleVersions);
-
-                                <tr class="@(version.Selected ? "bg-info" : "")" x-show="showAll || @alwaysShow">
-                                    <td><a asp-page="Package" asp-route-version="@version.Version">@version.Version.ToNormalizedString()</a></td>
-                                    <td>@version.Downloads.ToString("N0")</td>
-                                    <td>@version.LastUpdated.ToShortDateString()</td>
+                @<div x-data="{ showAll: false }">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Version</th>
+                                    <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Downloads</th>
+                                    <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Last updated</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @for (var i = 0; i < Model.Versions.Count; i++)
+                                {
+                                    var version = Model.Versions[i];
+                                    var alwaysShow = Json.Serialize(i < DefaultVisibleVersions);
+
+                                    <tr class="@(version.Selected ? "bg-blue-50" : "") border-b border-gray-100" x-show="showAll || @alwaysShow">
+                                        <td class="px-4 py-2"><a asp-page="Package" asp-route-version="@version.Version" class="text-primary hover:underline">@version.Version.ToNormalizedString()</a></td>
+                                        <td class="px-4 py-2 text-gray-600">@version.Downloads.ToString("N0")</td>
+                                        <td class="px-4 py-2 text-gray-600">@version.LastUpdated.ToShortDateString()</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
 
                     @if (Model.Versions.Count > DefaultVisibleVersions)
                     {
-                        <button type="button" class="link-button" @@click="showAll = !showAll">
-                            <i class="ms-Icon" x-bind:class="{ 'ms-Icon--CalculatorAddition': !showAll, 'ms-Icon--CalculatorSubtract': showAll }"></i>
+                        <button type="button" class="mt-3 text-primary hover:underline text-sm flex items-center gap-1" @@click="showAll = !showAll">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="!showAll"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="showAll"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                             <span x-text="showAll ? 'Show less' : 'Show more'"></span>
                         </button>
                     }
-
                 </div>);
             }
         </article>
 
-        <aside class="col-sm-3 package-details-info">
-            <div>
-                <h2>Info</h2>
-
-                <ul class="list-unstyled ms-Icon-ul">
-                    <li>
-                        <i class="ms-Icon ms-Icon--History" aria-hidden="true"></i>
+        <aside class="lg:col-span-3 space-y-6">
+            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                <h2 class="font-semibold text-gray-800 mb-3">Info</h2>
+                <ul class="space-y-2 text-sm">
+                    <li class="flex items-center gap-2 text-gray-600">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Last updated @Model.LastUpdated.Humanize()
                     </li>
 
                     @if (Model.Package.ProjectUrlString != null)
                     {
-                        <li>
-                            <i class="ms-Icon ms-Icon--Globe"></i>
-                            <a href="@Model.Package.ProjectUrlString">Project URL</a>
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                            <a href="@Model.Package.ProjectUrlString" class="text-primary hover:underline">Project URL</a>
                         </li>
                     }
 
                     @if (Model.Package.RepositoryUrlString != null)
                     {
-                        <li>
-                            <img class="icon" aria-hidden="true" alt="GitHub logo" src="@Url.Content("~/_content/BaGet.Web/images/github-32x32.png")" />
-                            <a href="@Model.Package.RepositoryUrlString">Source code</a>
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                            <a href="@Model.Package.RepositoryUrlString" class="text-primary hover:underline">Source code</a>
                         </li>
                     }
 
                     @if (Model.LicenseUrl != null)
                     {
-                        <li>
-                            <i class="ms-Icon ms-Icon--Certificate"></i>
-                            <a href="@Model.LicenseUrl">License</a>
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <a href="@Model.LicenseUrl" class="text-primary hover:underline">License</a>
                         </li>
                     }
 
-                    <li>
-                        <i class="ms-Icon ms-Icon--CloudDownload"></i>
-                        <a href="@Model.PackageDownloadUrl">Download package</a>
+                    <li class="flex items-center gap-2">
+                        <svg class="w-4 h-4 flex-shrink-0 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+                        <a href="@Model.PackageDownloadUrl" class="text-primary hover:underline">Download package</a>
                     </li>
                 </ul>
             </div>
 
-            <div>
-                <h2>Statistics</h2>
-
-                <ul class="list-unstyled ms-Icon-ul">
-                    <li>
-                        <i class="ms-Icon ms-Icon--Download"></i>
+            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                <h2 class="font-semibold text-gray-800 mb-3">Statistics</h2>
+                <ul class="space-y-2 text-sm">
+                    <li class="flex items-center gap-2 text-gray-600">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                         @Model.TotalDownloads.ToString("N0") total downloads
                     </li>
-
-                    <li>
-                        <i class="ms-Icon ms-Icon--Giftbox"></i>
+                    <li class="flex items-center gap-2 text-gray-600">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
                         @Model.Package.Downloads.ToString("N0") downloads of current version
                     </li>
                 </ul>
@@ -260,10 +255,9 @@ else
 
             @if (Model.Package.Authors.Any())
             {
-                <div>
-                    <h2>Authors</h2>
-
-                    <p>@string.Join(", ", Model.Package.Authors)</p>
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h2 class="font-semibold text-gray-800 mb-3">Authors</h2>
+                    <p class="text-gray-600 text-sm">@string.Join(", ", Model.Package.Authors)</p>
                 </div>
             }
         </aside>
@@ -329,17 +323,16 @@ else
 
     private void ExpandableSection(string title, bool expanded, Func<object, IHtmlContent> template)
     {
-        <div class="expandable-section" x-data="{ expanded: @Json.Serialize(expanded) }">
-            <h2>
-                <button type="button" class="link-button" @@click="expanded = !expanded">
-                    <i x-bind:class="{ 'ms-Icon--ChevronDown': expanded, 'ms-Icon--ChevronRight': !expanded }"
-                       class="ms-Icon">
-                    </i>
-                    <span>@title</span>
+        <div class="bg-white rounded-lg border border-gray-200" x-data="{ expanded: @Json.Serialize(expanded) }">
+            <h2 class="px-4 py-3 border-b border-gray-200">
+                <button type="button" class="flex items-center gap-2 text-gray-800 font-semibold w-full text-left" @@click="expanded = !expanded">
+                    <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-90': expanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    @title
                 </button>
             </h2>
-
-            <div x-show="expanded">@template(null)</div>
+            <div class="p-4" x-show="expanded" x-collapse>@template(null)</div>
         </div>
     }
 }
