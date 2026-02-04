@@ -1,3 +1,7 @@
+@using Microsoft.AspNetCore.Identity
+@using BaGet.Core.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,6 +49,29 @@
                                 Documentation
                             </a>
                         </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        @if (SignInManager.IsSignedIn(User))
+                        {
+                            <a asp-page="/Account/ApiKeys" class="text-gray-200 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
+                                API Keys
+                            </a>
+                            <span class="text-gray-300 text-sm hidden sm:inline">@User.Identity?.Name</span>
+                            <form method="post" asp-page="/Account/Logout" class="inline">
+                                <button type="submit" class="text-gray-200 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
+                                    Sign out
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <a asp-page="/Account/Login" class="text-gray-200 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
+                                Sign in
+                            </a>
+                            <a asp-page="/Account/Register" class="bg-accent hover:bg-amber-600 text-white px-3 py-1.5 text-sm font-medium rounded transition-colors">
+                                Register
+                            </a>
+                        }
                     </div>
                 </div>
             </div>

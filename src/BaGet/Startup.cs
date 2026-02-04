@@ -1,10 +1,13 @@
 using System;
 using BaGet.Core;
+using BaGet.Core.Identity;
+using BaGet.Database.PostgreSql;
 using BaGet.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,6 +55,21 @@ namespace BaGet
             services.AddSingleton<IConfigureOptions<MvcRazorRuntimeCompilationOptions>, ConfigureRazorRuntimeCompilation>();
 
             services.AddCors();
+
+            // Add ASP.NET Identity with PostgreSQL storage
+            services.AddBaGetIdentityServices();
+
+            // Configure authentication cookie
+            services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/Account/Login";
+                options.LogoutPath = "/Account/Logout";
+                options.AccessDeniedPath = "/Account/AccessDenied";
+                options.Cookie.Name = "BaGet.Auth";
+                options.Cookie.HttpOnly = true;
+                options.ExpireTimeSpan = TimeSpan.FromDays(14);
+                options.SlidingExpiration = true;
+            });
         }
 
         private void ConfigureBaGetApplication(BaGetApplication app)
@@ -60,6 +78,9 @@ namespace BaGet
             app.AddAzureTableDatabase();
             app.AddPostgreSqlDatabase();
             app.AddSqliteDatabase();
+
+            // Add Identity database (uses same connection as PostgreSQL packages)
+            app.AddPostgreSqlIdentity();
 
             // Add storage providers.
             app.AddFileStorage();
@@ -90,6 +111,11 @@ namespace BaGet
             app.UseRouting();
 
             app.UseCors(ConfigureBaGetOptions.CorsPolicy);
+
+            // Authentication and authorization middleware
+            app.UseAuthentication();
+            app.UseAuthorization();
+
             app.UseOperationCancelledMiddleware();
 
             app.UseEndpoints(endpoints =>
