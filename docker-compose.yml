@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  baget:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - Database__Type=PostgreSql
+      - Database__ConnectionString=Host=postgres;Database=baget;Username=baget;Password=baget
+      - Storage__Type=FileSystem
+      - Storage__Path=/data/packages
+      - Search__Type=Database
+      - ApiKey=your-api-key-here
+    volumes:
+      - baget-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=baget
+      - POSTGRES_PASSWORD=baget
+      - POSTGRES_DB=baget
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U baget -d baget"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  baget-data:
+  postgres-data:

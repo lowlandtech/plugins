@@ -1,5 +1,6 @@
 using System;
 using BaGet.Core;
+using BaGet.Core.Extensions;
 using BaGet.Core.Identity;
 using BaGet.Database.PostgreSql;
 using BaGet.Web;
@@ -63,6 +64,9 @@ namespace BaGet
 
             // Add ASP.NET Identity with PostgreSQL storage
             services.AddBaGetIdentityServices();
+
+            // Add GraphClient and subscription/licensing services
+            services.AddGraphServices(Configuration);
 
             // Configure authentication cookie
             services.ConfigureApplicationCookie(options =>

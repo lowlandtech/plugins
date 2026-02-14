@@ -1,121 +1,141 @@
-/* shadcn-style CSS Variables for BaGet */
-/* Based on shadcn/ui New York theme with BaGet brand colors */
+/* Lowland Tech Design Tokens */
+/* Synced with house style variables */
 
+/* Light theme (default) */
 :root {
-  --radius: 0.5rem;
+    --background: #fafafa;
+    --foreground: #1a1a27;
+    --card: #ffffff;
+    --card-foreground: #1a1a27;
+    --popover: #ffffff;
+    --popover-foreground: #1a1a27;
+    --primary: #6d5cff;
+    --primary-foreground: #ffffff;
+    --secondary: #f66426;
+    --secondary-foreground: #ffffff;
 
-  /* Light theme */
-  --background: 0 0% 100%;
-  --foreground: 210 40% 10%;
+    --muted: #f0f0f5;
+    --muted-foreground: #64648c;
+    --accent: #ebebf5;
+    --accent-foreground: #1a1a27;
+    --destructive: #e53935;
+    --destructive-foreground: #ffffff;
+    --border: #e0e0e8;
+    --input: #e0e0e8;
+    --ring: #6d5cff;
 
-  --card: 0 0% 100%;
-  --card-foreground: 210 40% 10%;
+    --success: #1ab394;
+    --success-foreground: #ffffff;
+    --warning: #fb8c00;
+    --warning-foreground: #ffffff;
+    --info: #1e88e5;
+    --info-foreground: #ffffff;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 210 40% 10%;
+    --chart-1: #6d5cff;
+    --chart-2: #f66426;
+    --chart-3: #1ab394;
+    --chart-4: #1e88e5;
+    --chart-5: #fb8c00;
 
-  /* BaGet primary: #004880 */
-  --primary: 207 100% 25%;
-  --primary-foreground: 0 0% 100%;
+    --sidebar: #f5f5fa;
+    --sidebar-foreground: #3a3a5c;
+    --sidebar-primary: #6d5cff;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #ebebf5;
+    --sidebar-accent-foreground: #1a1a27;
+    --sidebar-border: #e0e0e8;
+    --sidebar-ring: #6d5cff;
 
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 210 40% 10%;
+    /* Shared values */
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --radius: 0.5rem;
 
-  --muted: 210 40% 96%;
-  --muted-foreground: 210 20% 45%;
-
-  /* BaGet accent: #d87e00 */
-  --accent: 35 100% 42%;
-  --accent-foreground: 0 0% 100%;
-
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 207 100% 25%;
-
-  --success: 142 76% 36%;
-  --success-foreground: 0 0% 100%;
-
-  --warning: 38 92% 50%;
-  --warning-foreground: 0 0% 100%;
-
-  --info: 199 89% 48%;
-  --info-foreground: 0 0% 100%;
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
 }
 
+/* Dark theme */
 .dark {
-  --background: 210 40% 10%;
-  --foreground: 210 40% 98%;
+    --background: #1a1a27;
+    --foreground: #f4f5ff;
+    --card: #1f1f2e;
+    --card-foreground: #f4f5ff;
+    --popover: #1f1f2e;
+    --popover-foreground: #f4f5ff;
+    --primary: #7e6fff;
+    --primary-foreground: #ffffff;
+    --secondary: #f66426;
+    --secondary-foreground: #1a1a27;
 
-  --card: 210 40% 12%;
-  --card-foreground: 210 40% 98%;
+    --muted: #2a2a3a;
+    --muted-foreground: #a0a3b8;
+    --accent: #2f2a4f;
+    --accent-foreground: #f4f5ff;
+    --destructive: #ff5252;
+    --destructive-foreground: #ffffff;
+    --border: #2f2a4f;
+    --input: #2f2a4f;
+    --ring: #7e6fff;
 
-  --popover: 210 40% 12%;
-  --popover-foreground: 210 40% 98%;
+    --success: #1ec8a5;
+    --success-foreground: #1a1a27;
+    --warning: #ff9800;
+    --warning-foreground: #1a1a27;
+    --info: #2196f3;
+    --info-foreground: #1a1a27;
 
-  --primary: 207 90% 60%;
-  --primary-foreground: 210 40% 10%;
+    --chart-1: #7e6fff;
+    --chart-2: #f66426;
+    --chart-3: #1ec8a5;
+    --chart-4: #2196f3;
+    --chart-5: #ff9800;
 
-  --secondary: 210 40% 17%;
-  --secondary-foreground: 210 40% 98%;
-
-  --muted: 210 40% 17%;
-  --muted-foreground: 210 20% 65%;
-
-  --accent: 35 100% 50%;
-  --accent-foreground: 210 40% 10%;
-
-  --destructive: 0 62% 50%;
-  --destructive-foreground: 0 0% 100%;
-
-  --border: 210 40% 20%;
-  --input: 210 40% 20%;
-  --ring: 207 90% 60%;
-
-  --success: 142 70% 45%;
-  --success-foreground: 210 40% 10%;
-
-  --warning: 38 92% 55%;
-  --warning-foreground: 210 40% 10%;
-
-  --info: 199 89% 55%;
-  --info-foreground: 210 40% 10%;
+    --sidebar: #141420;
+    --sidebar-foreground: #d9d9f0;
+    --sidebar-primary: #7e6fff;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #2a2545;
+    --sidebar-accent-foreground: #f4f5ff;
+    --sidebar-border: #241f3b;
+    --sidebar-ring: #7e6fff;
 }
 
 /* Base styles */
 * {
-  border-color: hsl(var(--border));
+    border-color: var(--border);
 }
 
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    background-color: var(--background);
+    color: var(--foreground);
 }
 
 /* Focus ring utility */
 .focus-ring {
-  outline: none;
+    outline: none;
 }
 
 .focus-ring:focus-visible {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
 }
 
 /* Transition utilities */
 .transition-colors {
-  transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
 }
 
 /* Disabled state */
 .disabled\:opacity-50:disabled {
-  opacity: 0.5;
+    opacity: 0.5;
 }
 
 .disabled\:pointer-events-none:disabled {
-  pointer-events: none;
+    pointer-events: none;
 }

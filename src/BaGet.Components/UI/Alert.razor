@@ -18,11 +18,11 @@
 
         yield return Variant switch
         {
-            AlertVariant.Default => "bg-[hsl(var(--background))] text-[hsl(var(--foreground))]",
-            AlertVariant.Destructive => "border-[hsl(var(--destructive))]/50 text-[hsl(var(--destructive))] [&>svg]:text-[hsl(var(--destructive))]",
-            AlertVariant.Success => "border-[hsl(var(--success))]/50 bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
-            AlertVariant.Warning => "border-[hsl(var(--warning))]/50 bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]",
-            AlertVariant.Info => "border-[hsl(var(--info))]/50 bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]",
+            AlertVariant.Default => "bg-background text-foreground",
+            AlertVariant.Destructive => "border-destructive/50 text-destructive [&>svg]:text-destructive",
+            AlertVariant.Success => "border-success/50 bg-success/10 text-success",
+            AlertVariant.Warning => "border-warning/50 bg-warning/10 text-warning",
+            AlertVariant.Info => "border-info/50 bg-info/10 text-info",
             _ => ""
         };
 
